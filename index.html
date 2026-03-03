@@ -31,14 +31,9 @@
     header{margin-bottom: 14px;}
     h1{font-size: 24px; margin:0 0 6px;}
     .sub{color: var(--muted); line-height:1.45; font-size: 14px;}
-    .grid{
-      display:grid;
-      grid-template-columns: 1fr;
-      gap: 14px;
-    }
-    @media (min-width: 900px){
-      .grid{grid-template-columns: 1fr 1fr;}
-    }
+    .grid{display:grid; grid-template-columns: 1fr; gap: 14px;}
+    @media (min-width: 900px){ .grid{grid-template-columns: 1fr 1fr;} }
+
     .card{
       background: var(--card);
       border: 1px solid var(--line);
@@ -78,12 +73,7 @@
     .btnrow{display:flex; gap:10px; flex-wrap:wrap;}
     .btnrow button{flex:1; min-width: 200px;}
 
-    .kpis{
-      display:grid;
-      grid-template-columns: 1fr;
-      gap:10px;
-      margin-top: 12px;
-    }
+    .kpis{display:grid; grid-template-columns: 1fr; gap:10px; margin-top: 12px;}
     @media (min-width: 520px){ .kpis{grid-template-columns: 1fr 1fr;} }
     .kpi{
       border: 1px solid var(--line);
@@ -107,17 +97,9 @@
     .alert.warn{border-color: rgba(245,158,11,.30);}
     .alert.danger{border-color: rgba(220,38,38,.30);}
 
-    .sectionTitle{
-      margin-top: 14px;
-      font-size: 15px;
-      font-weight: 800;
-    }
+    .sectionTitle{margin-top: 14px; font-size: 15px; font-weight: 800;}
 
-    ul.bullets{
-      margin: 10px 0 0;
-      padding: 0;
-      list-style: none;
-    }
+    ul.bullets{margin: 10px 0 0; padding: 0; list-style: none;}
     ul.bullets li{
       margin: 10px 0;
       padding-left: 26px;
@@ -135,16 +117,22 @@
       font-weight: 900;
     }
 
+    .divider{border-top: 1px solid var(--line); margin: 12px 0;}
     .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;}
-    .footer{
-      margin-top: 12px;
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.45;
-    }
-    .divider{
-      border-top: 1px solid var(--line);
-      margin: 12px 0;
+    .footer{margin-top: 12px; font-size: 12px; color: var(--muted); line-height: 1.45;}
+
+    /* --- Printable/PDF layout --- */
+    @media print{
+      body{background:#fff; padding:0;}
+      .wrap{max-width: 100%; margin:0; }
+      .grid{grid-template-columns: 1fr;}
+      .card{box-shadow:none; border:0; border-radius:0; padding:0;}
+      .no-print{display:none !important;}
+      header{margin:0 0 10px;}
+      .kpi{border:1px solid #ddd;}
+      .alert{border:1px solid #ddd;}
+      .divider{border-top:1px solid #ddd;}
+      a{color:#000; text-decoration:none;}
     }
   </style>
 </head>
@@ -153,13 +141,13 @@
     <header>
       <h1>Fortrans pasiruošimo planas</h1>
       <div class="sub">
-        Įveskite svorį ir procedūros laiką — sugeneruosime aiškų planą.
+        Įveskite svorį, procedūros laiką ir kabineto numerį — sugeneruosime aiškų planą.
         <b>Baigti gerti visada 4 val. prieš procedūrą.</b>
       </div>
     </header>
 
     <div class="grid">
-      <section class="card">
+      <section class="card no-print">
         <h2>1) Įveskite duomenis</h2>
 
         <label for="weight">Svoris (kg)</label>
@@ -176,6 +164,9 @@
           </div>
         </div>
 
+        <label for="cabinet">Kabineto numeris</label>
+        <input id="cabinet" type="text" inputmode="numeric" placeholder="pvz., 214" />
+
         <label for="regimen">Režimas</label>
         <select id="regimen">
           <option value="auto" selected>Automatiškai (ryte: Split · popiet: Same-day)</option>
@@ -185,16 +176,17 @@
 
         <label for="eveningStart">Jei „Split“: kada pradėti išvakarėse</label>
         <select id="eveningStart"></select>
-        <div class="hint">Pagal planą: <b>1 val. gerti 1 L → 1 val. pertrauka</b> (kartoti).</div>
+        <div class="hint">Planas: <b>1 val. išgerti 1 L → 1 val. pertrauka</b> (kartoti).</div>
 
         <div class="btnrow">
           <button class="btn" id="calcBtn">2) Sukurti planą</button>
           <button class="btn secondary" id="copyBtn">Kopijuoti planą</button>
+          <button class="btn secondary" id="pdfBtn">Eksportuoti į PDF</button>
         </div>
         <div class="hint" id="copyStatus"></div>
       </section>
 
-      <section class="card">
+      <section class="card" id="resultCard">
         <h2>3) Jūsų planas</h2>
 
         <div class="kpis">
@@ -217,10 +209,15 @@
 
         <div class="divider"></div>
 
-        <div class="sectionTitle">Trumpi patarimai (bulletpoints)</div>
+        <div class="sectionTitle">Atvykimas į procedūrą</div>
+        <ul class="bullets" id="arrivalBullets"></ul>
+
+        <div class="divider"></div>
+
+        <div class="sectionTitle">Trumpi patarimai</div>
         <ul class="bullets">
           <li><b>Paruošimas:</b> 1 paketėlį ištirpinti 1 litre vandens, gerai išmaišyti. Jei padeda — atvėsinkite.</li>
-          <li><b>Gėrimas:</b> gerkite tolygiai per valandą, po to darykite valandos pertrauką (pagal planą žemiau).</li>
+          <li><b>Gėrimas:</b> per „Išgerti 1 L“ valandą gerkite mažais kiekiais reguliariai; per „Pertrauka“ valandą pailsėkite.</li>
           <li><b>Maistas:</b> laikykitės įstaigos dietos nurodymų (dažnai nuo vartojimo pradžios vengiama kieto maisto).</li>
           <li><b>Vaistai:</b> viduriavimas gali mažinti kai kurių vaistų pasisavinimą — jei vartojate svarbius vaistus, pasitarkite su gydytoju.</li>
           <li><b>Kada kreiptis:</b> jei atsiranda stiprus pilvo skausmas, alpimas ar kraujavimas — kreipkitės skubiai.</li>
@@ -238,15 +235,10 @@
   // ---------- helpers ----------
   const pad = (n)=>String(n).padStart(2,'0');
 
-  function fmtDate(dt){
-    return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
-  }
-  function fmtTime(dt){
-    return `${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
-  }
-  function fmtDateTime(dt){
-    return `${fmtDate(dt)} ${fmtTime(dt)}`;
-  }
+  function fmtDate(dt){ return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`; }
+  function fmtTime(dt){ return `${pad(dt.getHours())}:${pad(dt.getMinutes())}`; }
+  function fmtDateTime(dt){ return `${fmtDate(dt)} ${fmtTime(dt)}`; }
+
   function parseDateTime(dateStr, timeStr){
     const [y,m,d] = dateStr.split('-').map(Number);
     const [hh,mm] = timeStr.split(':').map(Number);
@@ -256,7 +248,7 @@
   function subMin(dt, mins){ return new Date(dt.getTime() - mins*60000); }
   function dayBefore(dt){ const x=new Date(dt); x.setDate(x.getDate()-1); return x; }
 
-  // Packs by weight (no formula shown in UI)
+  // Packs by weight (not shown as formula in UI)
   function packsFromWeight(weightKg){
     return Math.max(1, Math.ceil(weightKg / 20));
   }
@@ -264,14 +256,12 @@
   function chooseRegimen(procDT, setting){
     if(setting === 'split') return 'split';
     if(setting === 'sameday') return 'sameday';
-    // auto
     const hour = procDT.getHours() + procDT.getMinutes()/60;
     return (hour < 12) ? 'split' : 'sameday';
   }
 
   function splitVolumes(totalL){
-    // odd totals: more on procedure day
-    const day = Math.ceil(totalL/2);
+    const day = Math.ceil(totalL/2);     // more on procedure day
     const eve = totalL - day;
     return {eve, day};
   }
@@ -288,30 +278,21 @@
     }
   }
 
-  // Build hour-by-hour: 1 hour drink 1L, then 1 hour break (except after last liter)
+  // Hour-by-hour blocks: 1 hour drink 1L, 1 hour break between liters
   function buildHourlyBlocks(startDT, liters){
     const blocks = [];
     let t = new Date(startDT);
+
     for(let i=1; i<=liters; i++){
       const drinkStart = new Date(t);
       const drinkEnd = addMin(drinkStart, 60);
-      blocks.push({
-        type: 'drink',
-        start: drinkStart,
-        end: drinkEnd,
-        text: `${fmtTime(drinkStart)}–${fmtTime(drinkEnd)} · Išgerti 1 L`
-      });
+      blocks.push(`${fmtTime(drinkStart)}–${fmtTime(drinkEnd)} · Išgerti 1 L`);
       t = new Date(drinkEnd);
 
       if(i < liters){
         const brkStart = new Date(t);
         const brkEnd = addMin(brkStart, 60);
-        blocks.push({
-          type: 'break',
-          start: brkStart,
-          end: brkEnd,
-          text: `${fmtTime(brkStart)}–${fmtTime(brkEnd)} · Pertrauka (60 min)`
-        });
+        blocks.push(`${fmtTime(brkStart)}–${fmtTime(brkEnd)} · Pertrauka (60 min)`);
         t = new Date(brkEnd);
       }
     }
@@ -320,7 +301,6 @@
 
   function durationMinutesForLiters(liters){
     if(liters <= 0) return 0;
-    // drink 60 min each + break 60 between liters
     return (liters * 60) + ((liters - 1) * 60);
   }
 
@@ -348,23 +328,44 @@
     return wrap;
   }
 
+  function setArrivalBullets(procDT, cabinetValue){
+    const ul = document.getElementById('arrivalBullets');
+    ul.innerHTML = '';
+
+    const arriveDT = subMin(procDT, 30);
+    const cab = (cabinetValue || '').trim();
+
+    const items = [
+      `<b>Atvykite ${fmtDateTime(arriveDT)}</b> (30 min prieš procedūrą).`,
+      `Registratūroje <b>išsimuškite lapelį</b>, kad atvykote procedūrai.`,
+      cab ? `Po registracijos eikite į <b>${cab} kabinetą</b>.` : `Po registracijos eikite į <b>nurodytą kabinetą</b> (įrašykite kabineto numerį, jei žinote).`
+    ];
+
+    items.forEach(t => {
+      const li = document.createElement('li');
+      li.innerHTML = t;
+      ul.appendChild(li);
+    });
+  }
+
   let lastPlanText = "";
 
   // ---------- init ----------
   (function init(){
-    const procTime = document.getElementById('procTime');
-    const eveningStart = document.getElementById('eveningStart');
-
-    fillHalfHour(procTime, 6, 20);
-    fillHalfHour(eveningStart, 15, 22);
+    fillHalfHour(document.getElementById('procTime'), 6, 20);
+    fillHalfHour(document.getElementById('eveningStart'), 15, 22);
 
     const today = new Date();
     document.getElementById('procDate').value = fmtDate(today);
-    procTime.value = "09:00";
-    eveningStart.value = "18:00";
+    document.getElementById('procTime').value = "09:00";
+    document.getElementById('eveningStart').value = "18:00";
 
     document.getElementById('calcBtn').addEventListener('click', calculate);
     document.getElementById('copyBtn').addEventListener('click', copyPlan);
+    document.getElementById('pdfBtn').addEventListener('click', exportPDF);
+
+    // Recalc on cabinet change (so arrival text updates)
+    document.getElementById('cabinet').addEventListener('input', calculate);
 
     calculate();
   })();
@@ -375,28 +376,30 @@
     const procTime = document.getElementById('procTime').value;
     const regimenSetting = document.getElementById('regimen').value;
     const eveningStartClock = document.getElementById('eveningStart').value;
+    const cabinet = document.getElementById('cabinet').value;
 
     const planLists = document.getElementById('planLists');
     planLists.innerHTML = '';
-
     const alerts = [];
 
     if(!procDate || !procTime){
       renderAlerts([{type:'danger', html:'Įveskite procedūros datą ir laiką.'}]);
       return;
     }
+
+    const procDT = parseDateTime(procDate, procTime);
+    const finishDT = subMin(procDT, 240); // always 4 hours before
+
+    // Arrival bullets always render when date/time exist
+    setArrivalBullets(procDT, cabinet);
+
     if(!weight || weight <= 0){
       renderAlerts([{type:'warn', html:'Įveskite svorį (kg), kad galėtume apskaičiuoti paketėlių kiekį.'}]);
       document.getElementById('kpiPacks').textContent = '—';
-      document.getElementById('kpiFinish').textContent = '—';
+      document.getElementById('kpiFinish').textContent = fmtDateTime(finishDT);
       document.getElementById('planTitle').textContent = 'Planą matysite čia';
       return;
     }
-
-    const procDT = parseDateTime(procDate, procTime);
-
-    // Fixed: finish always 4 hours before
-    const finishDT = subMin(procDT, 240);
 
     const totalL = packsFromWeight(weight);
     const regimen = chooseRegimen(procDT, regimenSetting);
@@ -406,9 +409,8 @@
     document.getElementById('kpiFinish').textContent = fmtDateTime(finishDT);
 
     alerts.push({type:'ok', html:`Procedūra: <b>${fmtDateTime(procDT)}</b>. Baigti gerti iki: <b>${fmtDateTime(finishDT)}</b> (4 val. prieš).`});
-
     if(totalL >= 6){
-      alerts.push({type:'warn', html:`Jums gaunasi <b>${totalL} L</b>. Jei labai sunku toleruoti — susisiekite su įstaiga dėl individualaus plano.`});
+      alerts.push({type:'warn', html:`Gautas didesnis kiekis: <b>${totalL} L</b>. Jei sunku toleruoti — susisiekite su įstaiga dėl individualaus plano.`});
     }
 
     // Build plan parts
@@ -420,18 +422,14 @@
       eveL = vols.eve;
       dayL = vols.day;
 
-      // Procedure-day part must END exactly at finishDT
       const dayDuration = durationMinutesForLiters(dayL);
-      const dayEndDT = new Date(finishDT);
-      dayStartDT = subMin(dayEndDT, dayDuration);
+      dayStartDT = subMin(new Date(finishDT), dayDuration);
 
-      // Evening part starts day before at chosen time
       const eve = dayBefore(procDT);
       const [eh, em] = eveningStartClock.split(':').map(Number);
       eve.setHours(eh, em, 0, 0);
       eveStartDT = eve;
 
-      // Safety: if eveL=0 (rare for total=1) -> treat as same-day
       if(eveL <= 0){
         eveL = 0;
         dayL = totalL;
@@ -439,56 +437,42 @@
         dayStartDT = subMin(new Date(finishDT), dDur);
       }
     } else {
-      // same-day: everything ends at finishDT
       dayL = totalL;
       const dayDuration = durationMinutesForLiters(dayL);
       dayStartDT = subMin(new Date(finishDT), dayDuration);
     }
 
-    // Render lists as bulletpoints
     document.getElementById('planTitle').textContent = `Aiškus planas (kas valandą)`;
 
-    // Išvakarėse
+    // Išvakarėse bullets
     if(regimen === 'split' && eveL > 0){
       const eveBlocks = buildHourlyBlocks(eveStartDT, eveL);
       const bullets = [];
       bullets.push(`<b>Kiekis:</b> ${eveL} L (${eveL} pak.)`);
       bullets.push(`<b>Pradžia:</b> ${fmtDate(eveStartDT)} ${fmtTime(eveStartDT)}`);
-      eveBlocks.blocks.forEach(b => bullets.push(b.text));
+      eveBlocks.blocks.forEach(t => bullets.push(t));
       bullets.push(`<b>Pabaiga:</b> ${fmtTime(eveBlocks.endDT)}`);
-
-      planLists.appendChild(
-        renderBulletSection(`${fmtDate(eveStartDT)} · Išvakarėse`, bullets)
-      );
+      planLists.appendChild(renderBulletSection(`${fmtDate(eveStartDT)} · Išvakarėse`, bullets));
     }
 
-    // Tyrimo dieną
+    // Tyrimo dieną bullets
     {
       const dayBlocks = buildHourlyBlocks(dayStartDT, dayL);
       const bullets = [];
       bullets.push(`<b>Kiekis:</b> ${dayL} L (${dayL} pak.)`);
       bullets.push(`<b>Pradžia:</b> ${fmtDate(dayStartDT)} ${fmtTime(dayStartDT)}`);
-      dayBlocks.blocks.forEach(b => bullets.push(b.text));
+      dayBlocks.blocks.forEach(t => bullets.push(t));
       bullets.push(`<b>Pabaiga:</b> ${fmtTime(dayBlocks.endDT)} (baigta 4 val. iki procedūros)`);
-
-      planLists.appendChild(
-        renderBulletSection(`${fmtDate(dayStartDT)} · Tyrimo dieną`, bullets)
-      );
+      planLists.appendChild(renderBulletSection(`${fmtDate(dayStartDT)} · Tyrimo dieną`, bullets));
     }
-
-    // Quick “how to drink” bullets (short)
-    planLists.appendChild(renderBulletSection(`Kaip gerti per valandą`, [
-      `Per “Išgerti 1 L” valandą gerkite mažais kiekiais, pvz. po ~200–250 ml kas 10–15 min.`,
-      `Per “Pertrauka” valandą galite pailsėti (jei įstaiga leidžia — gurkšnoti skaidrius skysčius).`,
-      `Jei pykina — sulėtinkite tempą valandos ribose, darykite trumpas pauzes, bet stenkitės laikytis planuotų laikų.`
-    ]));
 
     renderAlerts(alerts);
 
-    // Copyable text plan (also bullet style)
+    // Copy text
     lastPlanText = buildTextPlan({
       totalL, regimen, procDT, finishDT,
-      eveL, dayL, eveStartDT, dayStartDT
+      eveL, dayL, eveStartDT, dayStartDT,
+      cabinet
     });
     document.getElementById('copyStatus').textContent = '';
   }
@@ -501,13 +485,25 @@
     lines.push(`Reikės: ${p.totalL} pak. (${p.totalL} L)`);
     lines.push(``);
 
+    // Arrival
+    const arriveDT = subMin(p.procDT, 30);
+    lines.push(`ATVYKIMAS`);
+    lines.push(`- Atvykite ${fmtDateTime(arriveDT)} (30 min prieš).`);
+    lines.push(`- Registratūroje išsimuškite lapelį, kad atvykote procedūrai.`);
+    if((p.cabinet || '').trim()){
+      lines.push(`- Eikite į ${String(p.cabinet).trim()} kabinetą.`);
+    } else {
+      lines.push(`- Eikite į nurodytą kabinetą.`);
+    }
+    lines.push(``);
+
     // Išvakarėse
     if(p.regimen === 'split' && p.eveL > 0){
       lines.push(`${fmtDate(p.eveStartDT)} · IŠVAKARĖSE`);
       lines.push(`- Kiekis: ${p.eveL} L (${p.eveL} pak.)`);
       const eve = buildHourlyBlocks(p.eveStartDT, p.eveL);
       lines.push(`- Pradžia: ${fmtTime(p.eveStartDT)}`);
-      eve.blocks.forEach(b => lines.push(`- ${b.text}`));
+      eve.blocks.forEach(t => lines.push(`- ${t}`));
       lines.push(`- Pabaiga: ${fmtTime(eve.endDT)}`);
       lines.push(``);
     }
@@ -517,7 +513,7 @@
     lines.push(`- Kiekis: ${p.dayL} L (${p.dayL} pak.)`);
     const day = buildHourlyBlocks(p.dayStartDT, p.dayL);
     lines.push(`- Pradžia: ${fmtTime(p.dayStartDT)}`);
-    day.blocks.forEach(b => lines.push(`- ${b.text}`));
+    day.blocks.forEach(t => lines.push(`- ${t}`));
     lines.push(`- Pabaiga: ${fmtTime(day.endDT)} (baigta 4 val. iki procedūros)`);
 
     return lines.join('\n');
@@ -536,6 +532,11 @@
       status.textContent = 'Nepavyko nukopijuoti automatiškai. (Naršyklė gali riboti leidimus.)';
       console.log(lastPlanText);
     }
+  }
+
+  function exportPDF(){
+    // Opens native print dialog; user selects "Save as PDF"
+    window.print();
   }
 </script>
 </body>
