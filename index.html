@@ -27,12 +27,13 @@
       color: var(--text);
       padding: 24px 14px 64px;
     }
-    .wrap{max-width: 900px; margin: 0 auto;}
+    .wrap{max-width: 980px; margin: 0 auto;}
     header{margin-bottom: 14px;}
     h1{font-size: 24px; margin:0 0 6px;}
     .sub{color: var(--muted); line-height:1.45; font-size: 14px;}
+
     .grid{display:grid; grid-template-columns: 1fr; gap: 14px;}
-    @media (min-width: 900px){ .grid{grid-template-columns: 1fr 1fr;} }
+    @media (min-width: 980px){ .grid{grid-template-columns: 1fr 1fr;} }
 
     .card{
       background: var(--card);
@@ -118,21 +119,42 @@
     }
 
     .divider{border-top: 1px solid var(--line); margin: 12px 0;}
-    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;}
     .footer{margin-top: 12px; font-size: 12px; color: var(--muted); line-height: 1.45;}
 
-    /* --- Printable/PDF layout --- */
+    /* ---------- PDF / PRINT: 1 page, compact ---------- */
+    @page { size: A4; margin: 10mm; }
+
     @media print{
       body{background:#fff; padding:0;}
-      .wrap{max-width: 100%; margin:0; }
+      .wrap{max-width: 100%; margin:0;}
+      header{margin:0 0 6px;}
+      h1{font-size: 16px; margin:0 0 2px;}
+      .sub{font-size: 10px; line-height:1.25;}
       .grid{grid-template-columns: 1fr;}
-      .card{box-shadow:none; border:0; border-radius:0; padding:0;}
+      .card{
+        box-shadow:none; border:0; border-radius:0;
+        padding:0;
+      }
       .no-print{display:none !important;}
-      header{margin:0 0 10px;}
-      .kpi{border:1px solid #ddd;}
-      .alert{border:1px solid #ddd;}
-      .divider{border-top:1px solid #ddd;}
-      a{color:#000; text-decoration:none;}
+      .kpi{border:1px solid #ddd; padding:8px;}
+      .kpi .v{font-size: 14px;}
+      .kpi .t{font-size: 9px;}
+      .kpis{gap:6px; margin-top:6px;}
+      .alert{display:none !important;} /* PDF'e paliekam tik esminį turinį */
+      .sectionTitle{margin-top:6px; font-size: 11px;}
+      ul.bullets{margin-top:4px;}
+      ul.bullets li{
+        margin: 3px 0;
+        font-size: 9.5px;
+        line-height: 1.25;
+        padding-left: 18px;
+      }
+      ul.bullets li::before{left:6px;}
+      .divider{margin:6px 0; border-top:1px solid #ddd;}
+      .footer{margin-top:6px; font-size: 9px; line-height:1.25;}
+      /* stengiamės išlaikyti 1 puslapį */
+      #resultCard { page-break-inside: avoid; break-inside: avoid; }
+      #planLists, #arrivalBullets, #dietBlock { page-break-inside: avoid; break-inside: avoid; }
     }
   </style>
 </head>
@@ -214,13 +236,16 @@
 
         <div class="divider"></div>
 
+        <div class="sectionTitle">Mityba ir skysčiai</div>
+        <div id="dietBlock"></div>
+
+        <div class="divider"></div>
+
         <div class="sectionTitle">Trumpi patarimai</div>
         <ul class="bullets">
           <li><b>Paruošimas:</b> 1 paketėlį ištirpinti 1 litre vandens, gerai išmaišyti. Jei padeda — atvėsinkite.</li>
           <li><b>Gėrimas:</b> per „Išgerti 1 L“ valandą gerkite mažais kiekiais reguliariai; per „Pertrauka“ valandą pailsėkite.</li>
-          <li><b>Maistas:</b> laikykitės įstaigos dietos nurodymų (dažnai nuo vartojimo pradžios vengiama kieto maisto).</li>
           <li><b>Vaistai:</b> viduriavimas gali mažinti kai kurių vaistų pasisavinimą — jei vartojate svarbius vaistus, pasitarkite su gydytoju.</li>
-          <li><b>Kada kreiptis:</b> jei atsiranda stiprus pilvo skausmas, alpimas ar kraujavimas — kreipkitės skubiai.</li>
           <li><b>Svarbiausia:</b> jei įstaiga pateikė konkretų protokolą — jis yra prioritetas.</li>
         </ul>
 
@@ -234,7 +259,6 @@
 <script>
   // ---------- helpers ----------
   const pad = (n)=>String(n).padStart(2,'0');
-
   function fmtDate(dt){ return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`; }
   function fmtTime(dt){ return `${pad(dt.getHours())}:${pad(dt.getMinutes())}`; }
   function fmtDateTime(dt){ return `${fmtDate(dt)} ${fmtTime(dt)}`; }
@@ -248,7 +272,7 @@
   function subMin(dt, mins){ return new Date(dt.getTime() - mins*60000); }
   function dayBefore(dt){ const x=new Date(dt); x.setDate(x.getDate()-1); return x; }
 
-  // Packs by weight (not shown as formula in UI)
+  // internal calc (not shown as formula in UI)
   function packsFromWeight(weightKg){
     return Math.max(1, Math.ceil(weightKg / 20));
   }
@@ -261,7 +285,7 @@
   }
 
   function splitVolumes(totalL){
-    const day = Math.ceil(totalL/2);     // more on procedure day
+    const day = Math.ceil(totalL/2);
     const eve = totalL - day;
     return {eve, day};
   }
@@ -338,7 +362,7 @@
     const items = [
       `<b>Atvykite ${fmtDateTime(arriveDT)}</b> (30 min prieš procedūrą).`,
       `Registratūroje <b>išsimuškite lapelį</b>, kad atvykote procedūrai.`,
-      cab ? `Po registracijos eikite į <b>${cab} kabinetą</b>.` : `Po registracijos eikite į <b>nurodytą kabinetą</b> (įrašykite kabineto numerį, jei žinote).`
+      cab ? `Po registracijos eikite į <b>${cab} kabinetą</b>.` : `Po registracijos eikite į <b>nurodytą kabinetą</b>.`
     ];
 
     items.forEach(t => {
@@ -346,6 +370,44 @@
       li.innerHTML = t;
       ul.appendChild(li);
     });
+  }
+
+  function setDietBlock(procDT, finishDT){
+    // 2-3 days: low-fiber (we keep concise)
+    const dayMinus2 = subMin(new Date(procDT), 2*24*60);
+    const dayMinus1 = subMin(new Date(procDT), 1*24*60);
+
+    // From "start of bowel prep" -> clear liquids only.
+    // In this tool we set it to the earliest prep block start (computed in calculate),
+    // and render dynamic bullet text there.
+    const dietDiv = document.getElementById('dietBlock');
+    dietDiv.innerHTML = ''; // rebuilt in calculate with the computed prepStartDT
+    // placeholder; real content built later
+  }
+
+  function renderDiet(prepStartDT, procDT, finishDT){
+    const dietDiv = document.getElementById('dietBlock');
+    dietDiv.innerHTML = '';
+
+    const dayMinus2 = subMin(new Date(procDT), 2*24*60);
+    const dayMinus1 = subMin(new Date(procDT), 1*24*60);
+
+    // “Nothing by mouth” from finishDT (4h before) per your rule.
+    const npoDT = new Date(finishDT);
+
+    const bulletsA = [
+      `<b>${fmtDate(dayMinus2)} – ${fmtDate(dayMinus1)}:</b> rinkitės <b>mažai skaidulų</b> turintį maistą (vengti sėklų, riešutų, uogų, daržovių su odele, pilno grūdo).`,
+      `<b>${fmtDate(dayMinus1)}:</b> laikykitės lengvesnio maisto (be daug skaidulų).`
+    ];
+
+    const bulletsB = [
+      `<b>Nuo ${fmtDateTime(prepStartDT)}:</b> <b>nebevalgyti kieto maisto</b> — gerti tik <b>skaidrius skysčius</b> (vanduo, arbata be pieno, skaidrus sultinys, skaidrios sultys be minkštimo, elektrolitai).`,
+      `<b>Vengti:</b> pieno, sulčių su minkštimu, raudonų/violetinių gėrimų, alkoholio.`,
+      `<b>Nuo ${fmtDateTime(npoDT)} (4 val. iki procedūros):</b> <b>nieko per burną</b> (nevalgyti ir negerti).`
+    ];
+
+    dietDiv.appendChild(renderBulletSection('Dieta iki paruošimo', bulletsA));
+    dietDiv.appendChild(renderBulletSection('Skaidrūs skysčiai ir “nieko per burną”', bulletsB));
   }
 
   let lastPlanText = "";
@@ -364,7 +426,6 @@
     document.getElementById('copyBtn').addEventListener('click', copyPlan);
     document.getElementById('pdfBtn').addEventListener('click', exportPDF);
 
-    // Recalc on cabinet change (so arrival text updates)
     document.getElementById('cabinet').addEventListener('input', calculate);
 
     calculate();
@@ -393,11 +454,17 @@
     // Arrival bullets always render when date/time exist
     setArrivalBullets(procDT, cabinet);
 
+    // If no weight, still show diet based on an approximate prepStartDT (fallback: day before 18:00)
     if(!weight || weight <= 0){
       renderAlerts([{type:'warn', html:'Įveskite svorį (kg), kad galėtume apskaičiuoti paketėlių kiekį.'}]);
       document.getElementById('kpiPacks').textContent = '—';
       document.getElementById('kpiFinish').textContent = fmtDateTime(finishDT);
       document.getElementById('planTitle').textContent = 'Planą matysite čia';
+
+      // fallback prep start for diet block
+      const fb = dayBefore(procDT);
+      fb.setHours(18,0,0,0);
+      renderDiet(fb, procDT, finishDT);
       return;
     }
 
@@ -416,6 +483,7 @@
     // Build plan parts
     let eveL=0, dayL=0;
     let eveStartDT=null, dayStartDT=null;
+    let prepStartDT=null;
 
     if(regimen === 'split'){
       const vols = splitVolumes(totalL);
@@ -436,10 +504,12 @@
         const dDur = durationMinutesForLiters(dayL);
         dayStartDT = subMin(new Date(finishDT), dDur);
       }
+      prepStartDT = (eveL > 0) ? new Date(eveStartDT) : new Date(dayStartDT);
     } else {
       dayL = totalL;
       const dayDuration = durationMinutesForLiters(dayL);
       dayStartDT = subMin(new Date(finishDT), dayDuration);
+      prepStartDT = new Date(dayStartDT);
     }
 
     document.getElementById('planTitle').textContent = `Aiškus planas (kas valandą)`;
@@ -466,13 +536,16 @@
       planLists.appendChild(renderBulletSection(`${fmtDate(dayStartDT)} · Tyrimo dieną`, bullets));
     }
 
+    // Diet block (dynamic)
+    renderDiet(prepStartDT, procDT, finishDT);
+
     renderAlerts(alerts);
 
     // Copy text
     lastPlanText = buildTextPlan({
       totalL, regimen, procDT, finishDT,
       eveL, dayL, eveStartDT, dayStartDT,
-      cabinet
+      cabinet, prepStartDT
     });
     document.getElementById('copyStatus').textContent = '';
   }
@@ -495,6 +568,16 @@
     } else {
       lines.push(`- Eikite į nurodytą kabinetą.`);
     }
+    lines.push(``);
+
+    // Diet
+    lines.push(`MITYBA IR SKYSČIAI`);
+    const dayMinus2 = subMin(new Date(p.procDT), 2*24*60);
+    const dayMinus1 = subMin(new Date(p.procDT), 1*24*60);
+    lines.push(`- ${fmtDate(dayMinus2)} – ${fmtDate(dayMinus1)}: mažai skaidulų (vengti sėklų, riešutų, uogų, pilno grūdo, daržovių su odele).`);
+    lines.push(`- ${fmtDate(dayMinus1)}: lengvesnis maistas (be daug skaidulų).`);
+    lines.push(`- Nuo ${fmtDateTime(p.prepStartDT)}: nebevalgyti kieto maisto — tik skaidrūs skysčiai.`);
+    lines.push(`- Nuo ${fmtDateTime(p.finishDT)}: nieko per burną (nevalgyti ir negerti).`);
     lines.push(``);
 
     // Išvakarėse
